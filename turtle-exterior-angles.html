@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>거북이와 외각의 합</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@500;700&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#e8ede6;
+    --surface:#fbfcfa;
+    --surface-2:#f1f5ef;
+    --ink:#1b2620;
+    --muted:#5d6f64;
+    --line:#c6d2c7;
+    --grid:#d7e0d6;
+    --path:#27353c;
+    --accent:#2f7d5a;
+    --shell:#4b8a5c;
+    --shell-dark:#2f6440;
+    --neg:#c0523f;
+    --glow:rgba(47,125,90,.22);
+    --sans:"IBM Plex Sans KR",system-ui,sans-serif;
+    --display:"Hahmlet",Georgia,serif;
+    box-sizing:border-box;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#111613;
+      --surface:#1a211d;
+      --surface-2:#212a24;
+      --ink:#e4ebe4;
+      --muted:#93a498;
+      --line:#334038;
+      --grid:#232d27;
+      --path:#cfe0d8;
+      --accent:#5fc497;
+      --shell:#4f9a67;
+      --shell-dark:#2f6b43;
+      --neg:#e2705a;
+      --glow:rgba(95,196,151,.2);
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111613;--surface:#1a211d;--surface-2:#212a24;--ink:#e4ebe4;--muted:#93a498;
+    --line:#334038;--grid:#232d27;--path:#cfe0d8;--accent:#5fc497;--shell:#4f9a67;
+    --shell-dark:#2f6b43;--neg:#e2705a;--glow:rgba(95,196,151,.2);color-scheme:dark;
+  }
+  *,*::before,*::after{box-sizing:inherit}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:var(--sans);font-size:15px;line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:22px 18px 48px}
+
+  header{margin-bottom:18px}
+  h1{
+    font-family:var(--display);font-weight:700;font-size:clamp(23px,4.4vw,34px);
+    line-height:1.25;margin:0 0 6px;letter-spacing:-.01em;
+  }
+  header p{margin:0;color:var(--muted);max-width:60ch}
+
+  .board{
+    display:grid;gap:16px;
+    grid-template-columns:minmax(0,1fr);
+  }
+  @media (min-width:900px){
+    .board{grid-template-columns:minmax(0,1fr) 322px;align-items:start}
+  }
+
+  .panel{
+    background:var(--surface);border:1px solid var(--line);border-radius:14px;
+    overflow:hidden;
+  }
+
+  .stage{position:relative;width:100%;aspect-ratio:4/3;max-height:min(66vh,580px)}
+  @media (max-width:640px){.stage{aspect-ratio:1/1;max-height:none}}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+
+  .badge{
+    position:absolute;top:12px;left:12px;pointer-events:none;
+    background:color-mix(in srgb,var(--surface) 86%,transparent);
+    border:1px solid var(--line);border-radius:10px;padding:7px 11px 8px;
+    backdrop-filter:blur(6px);
+  }
+  .badge .lbl{display:block;font-size:11.5px;color:var(--muted);line-height:1.2}
+  .badge .val{font-family:var(--display);font-weight:700;font-size:22px;line-height:1.15;letter-spacing:-.01em}
+  .hint{
+    position:absolute;right:12px;bottom:10px;font-size:11.5px;color:var(--muted);
+    pointer-events:none;text-align:right;
+  }
+
+  .controls{border-top:1px solid var(--line);padding:12px;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
+  .group{display:flex;align-items:center;gap:8px}
+  .group > span.lab{font-size:13px;color:var(--muted)}
+
+  button{
+    font:inherit;font-size:13.5px;font-weight:500;color:var(--ink);
+    background:var(--surface-2);border:1px solid var(--line);border-radius:9px;
+    padding:7px 13px;cursor:pointer;transition:background .14s,border-color .14s;
+  }
+  button:hover{background:var(--bg);border-color:var(--accent)}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#f7fbf8}
+  button.primary:hover{filter:brightness(1.07);background:var(--accent);border-color:var(--accent)}
+  button.icon{padding:6px 11px;font-family:var(--display);font-weight:700;font-size:15px;line-height:1}
+
+  .nbox{
+    display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;overflow:hidden;
+    background:var(--surface-2);
+  }
+  .nbox button{border:0;border-radius:0;background:transparent;padding:6px 11px;font-size:16px;line-height:1}
+  .nbox .num{
+    min-width:58px;text-align:center;font-family:var(--display);font-weight:700;font-size:15px;
+    border-left:1px solid var(--line);border-right:1px solid var(--line);padding:6px 4px;
+  }
+
+  input[type=range]{width:106px;accent-color:var(--accent)}
+  label.check{display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--muted);cursor:pointer}
+  label.check input{accent-color:var(--accent);width:15px;height:15px}
+
+  /* sidebar */
+  .side{display:grid;gap:16px}
+  .dial{padding:14px 14px 10px;text-align:center}
+  .dial h2{font-family:var(--display);font-weight:500;font-size:15px;margin:0 0 2px}
+  .dial p.sub{margin:0 0 8px;font-size:12.5px;color:var(--muted)}
+  .dialwrap{position:relative;width:min(248px,72vw);aspect-ratio:1;margin:0 auto}
+  .dialwrap canvas{width:100%;height:100%}
+  .dialcenter{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    pointer-events:none;
+  }
+  .dialcenter .big{font-family:var(--display);font-weight:700;font-size:27px;line-height:1.1;letter-spacing:-.015em}
+  .dialcenter .small{font-size:12px;color:var(--muted);margin-top:1px}
+  #msg{margin:8px 0 2px;font-size:13px;color:var(--accent);min-height:1.5em;font-weight:500}
+  #msg.warn{color:var(--neg)}
+
+  .ledger h2{font-family:var(--display);font-weight:500;font-size:15px;margin:0;padding:12px 14px 8px}
+  .rows{max-height:238px;overflow:auto;border-top:1px solid var(--line)}
+  .row{display:grid;grid-template-columns:22px 1fr auto auto;gap:9px;align-items:baseline;
+       padding:7px 14px;border-bottom:1px solid var(--line);font-size:13.5px}
+  .row:last-child{border-bottom:0}
+  .chip{width:11px;height:11px;border-radius:3px;align-self:center}
+  .row .who{color:var(--muted)}
+  .row .deg{font-family:var(--display);font-weight:700}
+  .row .run{color:var(--muted);font-size:12px;min-width:56px;text-align:right}
+  .row.neg .deg{color:var(--neg)}
+  .empty{padding:14px;color:var(--muted);font-size:13px}
+  .total{display:flex;justify-content:space-between;align-items:baseline;padding:10px 14px;
+         border-top:1px solid var(--line);background:var(--surface-2)}
+  .total span{color:var(--muted);font-size:13px}
+  .total strong{font-family:var(--display);font-size:19px}
+
+  .log{padding:12px 14px 14px}
+  .log h2{font-family:var(--display);font-weight:500;font-size:15px;margin:0 0 7px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .trial{font-size:12.5px;border:1px solid var(--line);border-radius:999px;padding:3px 9px;background:var(--surface-2)}
+  .trial b{font-family:var(--display);font-weight:700}
+  .log p{margin:8px 0 0;font-size:12.5px;color:var(--muted)}
+
+  .closing{
+    margin-top:18px;border-top:1px solid var(--line);padding-top:14px;
+    color:var(--muted);font-size:13.5px;max-width:72ch;
+  }
+  .closing b{color:var(--ink);font-weight:600}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>거북이는 한 바퀴만 돈다</h1>
+    <p>거북이가 다각형 둘레를 한 바퀴 걷습니다. 꼭짓점마다 몸을 꺾는 각이 바로 외각이에요. 꺾은 각을 모두 모아 오른쪽 원에 쌓아 보세요.</p>
+  </header>
+
+  <div class="board">
+    <div class="panel">
+      <div class="stage" id="stage">
+        <canvas id="cv"></canvas>
+        <div class="badge">
+          <span class="lbl">지금까지 꺾은 각</span>
+          <span class="val" id="badgeVal">0°</span>
+        </div>
+        <div class="hint">꼭짓점을 끌어 모양을 바꿔 보세요</div>
+      </div>
+      <div class="controls">
+        <div class="group">
+          <span class="lab">변의 개수</span>
+          <div class="nbox">
+            <button id="nMinus" aria-label="변 하나 줄이기">−</button>
+            <div class="num" id="nVal">5각형</div>
+            <button id="nPlus" aria-label="변 하나 늘리기">+</button>
+          </div>
+        </div>
+        <button id="btnRegular">정다각형</button>
+        <button id="btnShuffle">모양 바꾸기</button>
+        <button id="btnPlay" class="primary">일시정지</button>
+        <button id="btnStep">한 꼭짓점씩</button>
+        <button id="btnReset">처음부터</button>
+        <div class="group">
+          <span class="lab">속도</span>
+          <input type="range" id="speed" min="0.3" max="3" step="0.1" value="1" aria-label="걷는 속도">
+        </div>
+        <label class="check"><input type="checkbox" id="showInner"> 내각도 함께 보기</label>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="panel dial">
+        <h2>꺾은 각 모으기</h2>
+        <p class="sub">꺾을 때마다 그 각이 여기 쌓입니다</p>
+        <div class="dialwrap">
+          <canvas id="dial"></canvas>
+          <div class="dialcenter">
+            <div class="big" id="dialBig">0°</div>
+            <div class="small" id="dialSmall">한 바퀴까지 360°</div>
+          </div>
+        </div>
+        <p id="msg"></p>
+      </div>
+
+      <div class="panel ledger">
+        <h2>꼭짓점별 외각</h2>
+        <div class="rows" id="rows"><div class="empty">아직 꺾은 곳이 없습니다.</div></div>
+        <div class="total"><span>외각의 합</span><strong id="totalVal">0°</strong></div>
+      </div>
+
+      <div class="panel log">
+        <h2>실험 기록</h2>
+        <div class="chips" id="chips"></div>
+        <p id="logNote">한 바퀴를 끝낼 때마다 결과가 쌓입니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="closing">
+    변을 몇 개로 늘리든, 모양을 아무리 찌그러뜨리든 결과는 <b>언제나 360°</b>입니다. 출발할 때와 도착할 때 거북이가 바라보는 방향이 같으니, 도는 동안 몸이 돌아간 양은 정확히 한 바퀴일 수밖에 없거든요.
+    한 꼭짓점에서 <b>내각 + 외각 = 180°</b>이므로 꼭짓점이 n개면 180°×n − 360° = <b>180°×(n−2)</b>, 바로 내각의 합입니다.
+  </p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var PALETTE = ['#f0772f','#d79a12','#5fb84b','#17a98a','#2aa7c9','#3f7fd8',
+                 '#6a5ae0','#a04fd0','#d94a8f','#e8554d','#9c7b3a','#4f9c8c'];
+
+  var stage = document.getElementById('stage');
+  var cv = document.getElementById('cv');
+  var ctx = cv.getContext('2d');
+  var dial = document.getElementById('dial');
+  var dctx = dial.getContext('2d');
+
+  var T = {};
+  function readTheme(){
+    var cs = getComputedStyle(document.documentElement);
+    function g(k){ return cs.getPropertyValue(k).trim(); }
+    T = { ink:g('--ink'), muted:g('--muted'), line:g('--line'), grid:g('--grid'),
+          surface:g('--surface'), surface2:g('--surface-2'), path:g('--path'),
+          accent:g('--accent'), shell:g('--shell'), shellDark:g('--shell-dark'),
+          neg:g('--neg') };
+  }
+
+  /* ---------- geometry ---------- */
+  var V = [];
+  var n = 5;
+  var shapeKind = 'regular';
+
+  function makeRegular(k){
+    var a = [];
+    for(var i=0;i<k;i++){
+      var th = Math.PI/2 + i*2*Math.PI/k;      // 위에서 시작, 반시계 방향
+      a.push({x:Math.cos(th), y:Math.sin(th)});
+    }
+    return a;
+  }
+  function makeRandom(k){
+    var angs = [], i;
+    var gap = 2*Math.PI/k;
+    for(i=0;i<k;i++) angs.push(Math.PI/2 + i*gap + (Math.random()-0.5)*gap*0.62);
+    angs.sort(function(p,q){return p-q;});
+    var a = [];
+    for(i=0;i<k;i++){
+      var r = 0.66 + Math.random()*0.42;
+      a.push({x:r*Math.cos(angs[i]), y:r*Math.sin(angs[i])});
+    }
+    return a;
+  }
+  function signedArea(p){
+    var s=0;
+    for(var i=0;i<p.length;i++){ var q=p[(i+1)%p.length]; s += p[i].x*q.y - q.x*p[i].y; }
+    return s/2;
+  }
+  function ensureCCW(p){ if(signedArea(p)<0) p.reverse(); return p; }
+
+  function edgeDir(i){
+    var N=V.length, a=V[i], b=V[(i+1)%N];
+    var dx=b.x-a.x, dy=b.y-a.y, L=Math.hypot(dx,dy)||1e-9;
+    return {x:dx/L, y:dy/L, len:L, ang:Math.atan2(dy,dx)};
+  }
+  function turnAt(v){
+    var N=V.length;
+    var i=edgeDir((v-1+N)%N), o=edgeDir(v);
+    return Math.atan2(i.x*o.y - i.y*o.x, i.x*o.x + i.y*o.y);
+  }
+  function interiorAt(v){
+    var N=V.length;
+    var u=Math.atan2(V[(v+1)%N].y-V[v].y, V[(v+1)%N].x-V[v].x);
+    var w=Math.atan2(V[(v-1+N)%N].y-V[v].y, V[(v-1+N)%N].x-V[v].x);
+    var d=(w-u)%(2*Math.PI); if(d<0) d+=2*Math.PI;
+    return {start:u, span:d};
+  }
+  function segHit(p1,p2,p3,p4){
+    var d=(p2.x-p1.x)*(p4.y-p3.y)-(p2.y-p1.y)*(p4.x-p3.x);
+    if(Math.abs(d)<1e-12) return false;
+    var u=((p3.x-p1.x)*(p4.y-p3.y)-(p3.y-p1.y)*(p4.x-p3.x))/d;
+    var v=((p3.x-p1.x)*(p2.y-p1.y)-(p3.y-p1.y)*(p2.x-p1.x))/d;
+    return u>1e-7 && u<1-1e-7 && v>1e-7 && v<1-1e-7;
+  }
+  function isValid(p){
+    var N=p.length, i, j;
+    for(i=0;i<N;i++){
+      if(Math.hypot(p[(i+1)%N].x-p[i].x, p[(i+1)%N].y-p[i].y) < 0.14) return false;
+    }
+    for(i=0;i<N;i++) for(j=i+1;j<N;j++){
+      if(j===i+1 || (i===0 && j===N-1)) continue;
+      if(segHit(p[i],p[(i+1)%N],p[j],p[(j+1)%N])) return false;
+    }
+    return true;
+  }
+
+  /* ---------- run state ---------- */
+  var turns=[];                 // {v, a}
+  var phase='move', prog=0;
+  var pos={x:0,y:0}, heading=0;
+  var curTurn=0, turnFrom=0, turnV=0;
+  var playing=true, speed=1, stepTarget=null, showInner=false;
+  var dragIdx=-1, hoverIdx=-1, doneAt=-1;
+  var trials=[];
+
+  function resetRun(){
+    turns=[]; prog=0; phase='move'; stepTarget=null; doneAt=-1;
+    pos={x:V[0].x, y:V[0].y};
+    heading=edgeDir(0).ang;
+    curTurn=0; turnFrom=heading; turnV=0;
+    renderRows(); setMsg('');
+  }
+  function newShape(kind){
+    n = Math.max(3, Math.min(12, n));
+    V = ensureCCW(kind==='random' ? makeRandom(n) : makeRegular(n));
+    shapeKind = kind;
+    document.getElementById('nVal').textContent = n + '각형';
+    resetRun();
+  }
+  function ease(t){ return t*t*(3-2*t); }
+
+  function tick(dt){
+    if(!playing || phase==='done') return;
+    var N=V.length;
+    if(phase==='move'){
+      var e = turns.length % N;
+      var d = edgeDir(e);
+      var dur = Math.max(0.1, d.len/(0.62*speed));
+      prog += dt/dur;
+      var A=V[e], B=V[(e+1)%N];
+      if(prog>=1){
+        prog=0; pos={x:B.x,y:B.y};
+        turnV=(e+1)%N; curTurn=turnAt(turnV); turnFrom=d.ang; heading=d.ang;
+        phase='turn';
+      } else {
+        pos={x:A.x+(B.x-A.x)*prog, y:A.y+(B.y-A.y)*prog};
+        heading=d.ang;
+      }
+    } else if(phase==='turn'){
+      var dur2 = Math.max(0.16, Math.abs(curTurn)/(2.0*speed));
+      prog += dt/dur2;
+      if(prog>=1){
+        prog=0; heading = turnFrom + curTurn;
+        turns.push({v:turnV, a:curTurn});
+        renderRows();
+        if(turns.length>=N){ phase='done'; onComplete(); }
+        else {
+          phase='move';
+          if(stepTarget!==null && turns.length>=stepTarget){ stepTarget=null; setPlaying(false); }
+        }
+      } else {
+        heading = turnFrom + curTurn*ease(prog);
+      }
+    }
+  }
+
+  function sumSoFar(){
+    var s=0, i;
+    for(i=0;i<turns.length;i++) s+=turns[i].a;
+    if(phase==='turn') s += curTurn*ease(prog);
+    return s;
+  }
+  function deg(r){ return r*180/Math.PI; }
+  function fmt(d){
+    if(Math.abs(d-360)<0.05) return '360°';
+    if(Math.abs(d)<0.05) return '0°';
+    var v=Math.round(d*10)/10;
+    return (Math.abs(v-Math.round(v))<1e-9 ? Math.round(v) : v.toFixed(1)) + '°';
+  }
+
+  function onComplete(){
+    doneAt = performance.now();
+    var total = deg(sumSoFar());
+    var kind = shapeKind==='regular' ? '정' : (shapeKind==='random' ? '볼록' : '내가 만든 ');
+    var label = (shapeKind==='custom' ? '내가 만든 ' + n + '각형' : kind + n + '각형');
+    trials.unshift({label:label, val:fmt(total)});
+    if(trials.length>8) trials.pop();
+    renderTrials();
+    setMsg('한 바퀴 완성! 꺾은 각을 모두 더하니 정확히 360°입니다.');
+  }
+  function setMsg(s, warn){
+    var el=document.getElementById('msg');
+    el.textContent=s||''; el.className = warn ? 'warn' : '';
+  }
+
+  /* ---------- canvas setup ---------- */
+  var W=0,H=0,DPR=1,cx=0,cy=0,sc=100;
+  var dW=0,dH=0;
+  function resize(){
+    DPR = Math.min(window.devicePixelRatio||1, 2);
+    var r = stage.getBoundingClientRect();
+    W=Math.max(1,Math.round(r.width)); H=Math.max(1,Math.round(r.height));
+    cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    cx=W/2; cy=H/2; sc=Math.min(W,H)*0.37;
+
+    var r2 = dial.parentNode.getBoundingClientRect();
+    dW=Math.max(1,Math.round(r2.width)); dH=Math.max(1,Math.round(r2.height));
+    dial.width=Math.round(dW*DPR); dial.height=Math.round(dH*DPR);
+    dctx.setTransform(DPR,0,0,DPR,0,0);
+    draw();
+  }
+  function X(x){ return cx + x*sc; }
+  function Y(y){ return cy - y*sc; }
+  function arcW(c, cxw, cyw, r, a0, a1){
+    c.arc(X(cxw), Y(cyw), r*sc, -a0, -a1, a1>a0);
+  }
+  function rgba(hex, a){
+    var h=hex.replace('#','');
+    if(h.length===3) h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+    var num=parseInt(h,16);
+    return 'rgba('+((num>>16)&255)+','+((num>>8)&255)+','+(num&255)+','+a+')';
+  }
+  function letter(i){ return String.fromCharCode(65+i); }
+
+  /* ---------- main drawing ---------- */
+  function draw(){
+    var N=V.length, i;
+    ctx.clearRect(0,0,W,H);
+
+    // dot grid
+    var step = sc*0.25;
+    ctx.fillStyle = T.grid;
+    for(var gx=cx%step; gx<W; gx+=step)
+      for(var gy=cy%step; gy<H; gy+=step){
+        ctx.beginPath(); ctx.arc(gx,gy,1.1,0,6.283); ctx.fill();
+      }
+
+    // polygon guide
+    ctx.save();
+    ctx.setLineDash([5,6]); ctx.lineWidth=1.4; ctx.strokeStyle=T.line;
+    ctx.beginPath(); ctx.moveTo(X(V[0].x),Y(V[0].y));
+    for(i=1;i<N;i++) ctx.lineTo(X(V[i].x),Y(V[i].y));
+    ctx.closePath(); ctx.stroke(); ctx.restore();
+
+    // walked path
+    ctx.save();
+    ctx.lineWidth=3.4; ctx.strokeStyle=T.path; ctx.lineCap='round'; ctx.lineJoin='round';
+    var done=turns.length;
+    if(done>0 || phase!=='move' || prog>0){
+      ctx.beginPath(); ctx.moveTo(X(V[0].x),Y(V[0].y));
+      for(i=1;i<=Math.min(done,N);i++) ctx.lineTo(X(V[i%N].x),Y(V[i%N].y));
+      if(phase==='move' && prog>0 && done<N) ctx.lineTo(X(pos.x),Y(pos.y));
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // exterior (and interior) angles
+    for(i=0;i<turns.length;i++) drawTurn(turns[i].v, turns[i].a, 1);
+    if(phase==='turn') drawTurn(turnV, curTurn, ease(prog));
+
+    // vertices
+    for(i=0;i<N;i++){
+      var active = (i===dragIdx || i===hoverIdx);
+      ctx.beginPath(); ctx.arc(X(V[i].x),Y(V[i].y), active?8:6, 0, 6.283);
+      ctx.fillStyle=T.surface; ctx.fill();
+      ctx.lineWidth=2.2; ctx.strokeStyle= active ? T.accent : T.line; ctx.stroke();
+      // label pushed outward from centre
+      var L=Math.hypot(V[i].x,V[i].y)||1;
+      ctx.font='600 12.5px "IBM Plex Sans KR",sans-serif';
+      ctx.fillStyle=T.muted; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(letter(i), X(V[i].x + V[i].x/L*0.14), Y(V[i].y + V[i].y/L*0.14));
+    }
+
+    // start flag
+    ctx.save();
+    ctx.strokeStyle=T.accent; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(X(V[0].x),Y(V[0].y),12,0,6.283); ctx.stroke();
+    ctx.restore();
+
+    drawTurtle(pos.x,pos.y,heading);
+
+    if(doneAt>0){
+      var age=(performance.now()-doneAt)/1000;
+      if(age<1.4){
+        ctx.save();
+        ctx.globalAlpha=Math.max(0,1-age/1.4);
+        ctx.strokeStyle=T.accent; ctx.lineWidth=3;
+        ctx.beginPath(); ctx.arc(X(V[0].x),Y(V[0].y), 14+age*46, 0, 6.283); ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    drawDial();
+    var s=fmt(deg(sumSoFar()));
+    document.getElementById('badgeVal').textContent=s;
+    document.getElementById('dialBig').textContent=s;
+    document.getElementById('totalVal').textContent=s;
+    document.getElementById('dialSmall').textContent =
+      (phase==='done') ? '정확히 한 바퀴' : '한 바퀴까지 360°';
+  }
+
+  function drawTurn(v, a, frac){
+    var N=V.length;
+    var inD = edgeDir((v-1+N)%N), outD = edgeDir(v);
+    var base = inD.ang;
+    var r = Math.min(0.17, 0.30*Math.min(inD.len, outD.len));
+    var col = a<0 ? T.neg : PALETTE[v%PALETTE.length];
+    var shown = a*frac;
+
+    // dashed continuation of the incoming edge
+    ctx.save();
+    ctx.setLineDash([4,4]); ctx.lineWidth=1.5; ctx.strokeStyle=rgba(col,0.75);
+    ctx.beginPath(); ctx.moveTo(X(V[v].x),Y(V[v].y));
+    ctx.lineTo(X(V[v].x+inD.x*(r+0.12)), Y(V[v].y+inD.y*(r+0.12)));
+    ctx.stroke(); ctx.restore();
+
+    // interior angle
+    if(showInner){
+      var ia = interiorAt(v);
+      var ir = r*0.62;
+      ctx.save();
+      ctx.beginPath(); ctx.moveTo(X(V[v].x),Y(V[v].y));
+      arcW(ctx, V[v].x, V[v].y, ir, ia.start, ia.start+ia.span);
+      ctx.closePath();
+      ctx.fillStyle=rgba(T.muted,0.16); ctx.fill();
+      ctx.lineWidth=1.4; ctx.strokeStyle=rgba(T.muted,0.6);
+      ctx.beginPath(); arcW(ctx, V[v].x, V[v].y, ir, ia.start, ia.start+ia.span); ctx.stroke();
+      var mi=ia.start+ia.span/2;
+      label(V[v].x+Math.cos(mi)*ir*0.62, V[v].y+Math.sin(mi)*ir*0.62, fmt(deg(ia.span)), T.muted, 11);
+      ctx.restore();
+    }
+
+    // exterior wedge
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(X(V[v].x),Y(V[v].y));
+    arcW(ctx, V[v].x, V[v].y, r, base, base+shown);
+    ctx.closePath();
+    ctx.fillStyle=rgba(col,0.22); ctx.fill();
+    ctx.beginPath(); arcW(ctx, V[v].x, V[v].y, r, base, base+shown);
+    ctx.lineWidth=2.4; ctx.strokeStyle=col; ctx.stroke();
+    ctx.restore();
+
+    if(Math.abs(shown)>0.08){
+      var m=base+shown/2;
+      label(V[v].x+Math.cos(m)*(r+0.1), V[v].y+Math.sin(m)*(r+0.1), fmt(deg(shown)), col, 13);
+    }
+  }
+
+  function label(wx, wy, text, color, size){
+    ctx.save();
+    ctx.font='700 '+size+'px "Hahmlet",Georgia,serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.lineWidth=3.4; ctx.strokeStyle=T.surface; ctx.lineJoin='round';
+    ctx.strokeText(text, X(wx), Y(wy));
+    ctx.fillStyle=color; ctx.fillText(text, X(wx), Y(wy));
+    ctx.restore();
+  }
+
+  function drawTurtle(px,py,h){
+    var k = Math.max(11, Math.min(22, sc*0.075))/16;
+    ctx.save();
+    ctx.translate(X(px),Y(py)); ctx.rotate(-h); ctx.scale(k,k);
+
+    // legs
+    ctx.fillStyle=T.shellDark;
+    var legs=[[7,8,0.6],[7,-8,-0.6],[-7,8,2.5],[-7,-8,-2.5]];
+    for(var i=0;i<legs.length;i++){
+      ctx.save(); ctx.translate(legs[i][0],legs[i][1]); ctx.rotate(legs[i][2]);
+      ctx.beginPath(); ctx.ellipse(0,0,5.2,3.1,0,0,6.283); ctx.fill(); ctx.restore();
+    }
+    // tail
+    ctx.beginPath(); ctx.moveTo(-11,0); ctx.lineTo(-17,2.4); ctx.lineTo(-17,-2.4);
+    ctx.closePath(); ctx.fill();
+    // head
+    ctx.beginPath(); ctx.ellipse(14.5,0,5.6,4.6,0,0,6.283); ctx.fill();
+    // shell
+    ctx.beginPath(); ctx.ellipse(0,0,12.4,10.4,0,0,6.283);
+    ctx.fillStyle=T.shell; ctx.fill();
+    ctx.lineWidth=1.8; ctx.strokeStyle=T.shellDark; ctx.stroke();
+    // shell plates
+    ctx.beginPath(); ctx.ellipse(0,0,5.4,4.6,0,0,6.283); ctx.stroke();
+    ctx.lineWidth=1.3;
+    for(var a=0;a<6;a++){
+      var th=a*Math.PI/3+Math.PI/6;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(th)*5.4, Math.sin(th)*4.6);
+      ctx.lineTo(Math.cos(th)*12.2, Math.sin(th)*10.2);
+      ctx.stroke();
+    }
+    // eye
+    ctx.beginPath(); ctx.arc(16.6,-2.1,1.15,0,6.283); ctx.fillStyle=T.surface; ctx.fill();
+    ctx.restore();
+  }
+
+  /* ---------- dial ---------- */
+  function drawDial(){
+    dctx.clearRect(0,0,dW,dH);
+    var ccx=dW/2, ccy=dH/2, R=Math.min(dW,dH)*0.46, inner=R*0.56;
+
+    // ticks every 30°
+    dctx.strokeStyle=T.line; dctx.lineWidth=1;
+    for(var d=0; d<360; d+=30){
+      var th=-d*Math.PI/180;
+      dctx.beginPath();
+      dctx.moveTo(ccx+Math.cos(th)*(R+3), ccy+Math.sin(th)*(R+3));
+      dctx.lineTo(ccx+Math.cos(th)*(R+ (d%90===0?9:6)), ccy+Math.sin(th)*(R+(d%90===0?9:6)));
+      dctx.stroke();
+    }
+    // ring base
+    dctx.beginPath(); dctx.arc(ccx,ccy,R,0,6.283);
+    dctx.arc(ccx,ccy,inner,0,6.283,true);
+    dctx.fillStyle=T.surface2; dctx.fill();
+
+    var items=[], i;
+    for(i=0;i<turns.length;i++) items.push({a:turns[i].a, c:PALETTE[turns[i].v%PALETTE.length]});
+    if(phase==='turn') items.push({a:curTurn*ease(prog), c:PALETTE[turnV%PALETTE.length], live:true});
+
+    var acc=0;
+    for(i=0;i<items.length;i++){
+      var a0=acc, a1=acc+items[i].a; acc=a1;
+      var col = items[i].a<0 ? T.neg : items[i].c;
+      dctx.beginPath();
+      dctx.arc(ccx,ccy,R,-a0,-a1, items[i].a>0);
+      dctx.arc(ccx,ccy,inner,-a1,-a0, items[i].a<=0);
+      dctx.closePath();
+      dctx.fillStyle=rgba(col, items[i].live?0.55:0.8); dctx.fill();
+      dctx.lineWidth=1.4; dctx.strokeStyle=T.surface; dctx.stroke();
+    }
+
+    // outline
+    dctx.lineWidth=1.6; dctx.strokeStyle=T.line;
+    dctx.beginPath(); dctx.arc(ccx,ccy,R,0,6.283); dctx.stroke();
+    dctx.beginPath(); dctx.arc(ccx,ccy,inner,0,6.283); dctx.stroke();
+
+    // marker at current total
+    var mt=-acc;
+    dctx.save();
+    dctx.strokeStyle=T.ink; dctx.lineWidth=2; dctx.lineCap='round';
+    dctx.beginPath();
+    dctx.moveTo(ccx+Math.cos(mt)*(inner-4), ccy+Math.sin(mt)*(inner-4));
+    dctx.lineTo(ccx+Math.cos(mt)*(R+4), ccy+Math.sin(mt)*(R+4));
+    dctx.stroke(); dctx.restore();
+
+    if(phase==='done'){
+      dctx.save();
+      dctx.strokeStyle=T.accent; dctx.lineWidth=3;
+      dctx.beginPath(); dctx.arc(ccx,ccy,R+1.5,0,6.283); dctx.stroke();
+      dctx.restore();
+    }
+  }
+
+  /* ---------- DOM rendering ---------- */
+  function renderRows(){
+    var box=document.getElementById('rows');
+    if(turns.length===0){ box.innerHTML='<div class="empty">아직 꺾은 곳이 없습니다.</div>'; return; }
+    var html='', run=0;
+    for(var i=0;i<turns.length;i++){
+      var a=deg(turns[i].a); run+=a;
+      var c = turns[i].a<0 ? T.neg : PALETTE[turns[i].v%PALETTE.length];
+      html += '<div class="row'+(turns[i].a<0?' neg':'')+'">'
+            + '<span class="chip" style="background:'+c+'"></span>'
+            + '<span class="who">'+letter(turns[i].v)+' 꼭짓점</span>'
+            + '<span class="deg">'+fmt(a)+'</span>'
+            + '<span class="run">누적 '+fmt(run)+'</span></div>';
+    }
+    box.innerHTML=html;
+    box.scrollTop=box.scrollHeight;
+  }
+  function renderTrials(){
+    var box=document.getElementById('chips'), html='';
+    for(var i=0;i<trials.length;i++)
+      html += '<span class="trial">'+trials[i].label+' <b>'+trials[i].val+'</b></span>';
+    box.innerHTML=html;
+    document.getElementById('logNote').textContent =
+      trials.length ? '변의 개수가 달라도 합은 바뀌지 않습니다.' : '한 바퀴를 끝낼 때마다 결과가 쌓입니다.';
+  }
+
+  /* ---------- controls ---------- */
+  function setPlaying(p){
+    playing=p;
+    document.getElementById('btnPlay').textContent = p ? '일시정지' : '재생';
+  }
+  document.getElementById('btnPlay').onclick=function(){
+    if(phase==='done'){ resetRun(); setPlaying(true); } else setPlaying(!playing);
+  };
+  document.getElementById('btnReset').onclick=function(){ resetRun(); setPlaying(true); };
+  document.getElementById('btnStep').onclick=function(){
+    if(phase==='done') resetRun();
+    stepTarget=turns.length+1; setPlaying(true);
+  };
+  document.getElementById('btnRegular').onclick=function(){ newShape('regular'); setPlaying(true); };
+  document.getElementById('btnShuffle').onclick=function(){ newShape('random'); setPlaying(true); };
+  document.getElementById('nPlus').onclick=function(){ if(n<12){ n++; newShape(shapeKind==='random'?'random':'regular'); setPlaying(true);} };
+  document.getElementById('nMinus').onclick=function(){ if(n>3){ n--; newShape(shapeKind==='random'?'random':'regular'); setPlaying(true);} };
+  document.getElementById('speed').oninput=function(){ speed=parseFloat(this.value); };
+  document.getElementById('showInner').onchange=function(){ showInner=this.checked; };
+
+  document.addEventListener('keydown', function(e){
+    if(e.target.tagName==='INPUT') return;
+    if(e.code==='Space'){ e.preventDefault(); document.getElementById('btnPlay').click(); }
+    if(e.key==='r'||e.key==='R'){ resetRun(); setPlaying(true); }
+  });
+
+  /* ---------- dragging ---------- */
+  function toWorld(e){
+    var r=cv.getBoundingClientRect();
+    return { x:(e.clientX-r.left-cx)/sc, y:(cy-(e.clientY-r.top))/sc };
+  }
+  function nearest(p){
+    var best=-1, bd=1e9;
+    for(var i=0;i<V.length;i++){
+      var d=Math.hypot(V[i].x-p.x, V[i].y-p.y);
+      if(d<bd){ bd=d; best=i; }
+    }
+    return bd*sc < 22 ? best : -1;
+  }
+  cv.addEventListener('pointerdown', function(e){
+    var p=toWorld(e), i=nearest(p);
+    if(i<0) return;
+    dragIdx=i; cv.setPointerCapture(e.pointerId);
+    setPlaying(false); resetRun();
+  });
+  cv.addEventListener('pointermove', function(e){
+    var p=toWorld(e);
+    if(dragIdx<0){ hoverIdx=nearest(p); cv.style.cursor = hoverIdx>=0 ? 'grab':'default'; return; }
+    var L=Math.hypot(p.x,p.y);
+    if(L>1.3){ p.x*=1.3/L; p.y*=1.3/L; }
+    var old={x:V[dragIdx].x, y:V[dragIdx].y};
+    V[dragIdx]={x:p.x, y:p.y};
+    if(!isValid(V)){ V[dragIdx]=old; }
+    else { shapeKind='custom'; resetRun(); }
+  });
+  function endDrag(e){
+    if(dragIdx<0) return;
+    dragIdx=-1; setPlaying(true);
+    if(signedArea(V)<0) ensureCCW(V);
+    resetRun();
+  }
+  cv.addEventListener('pointerup', endDrag);
+  cv.addEventListener('pointercancel', endDrag);
+  cv.addEventListener('pointerleave', function(){ if(dragIdx<0){ hoverIdx=-1; } });
+
+  /* ---------- loop ---------- */
+  var last=0;
+  function frame(ts){
+    if(!last) last=ts;
+    var dt=Math.min(0.05,(ts-last)/1000); last=ts;
+    tick(dt);
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  readTheme();
+  newShape('regular');
+  if(window.ResizeObserver){
+    new ResizeObserver(resize).observe(stage);
+  }
+  window.addEventListener('resize', resize);
+  if(window.matchMedia){
+    var mq=window.matchMedia('(prefers-color-scheme: dark)');
+    if(mq.addEventListener) mq.addEventListener('change', function(){ readTheme(); draw(); });
+  }
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ draw(); });
+  resize();
+  setPlaying(true);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
